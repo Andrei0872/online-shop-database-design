@@ -17,3 +17,11 @@ Prezenta baza de date modeleaza un magazin online. In ziua de azi exista numeroa
 <div style="text-align: center;">
   <img src="./images/erd-shop.jpg">
 </div>
+
+## 3
+
+> Pornind de la diagrama entitate-relație realizați diagrama conceptuală a modelului propus, integrând toate atributele necesare.
+
+<div style="text-align: center;">
+  <img src="./images/conceptual-diagram-shop.jpg">
+</div>
