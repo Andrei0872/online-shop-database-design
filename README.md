@@ -221,3 +221,79 @@ insert into "offer_product" values (4, 8);
 insert into "offer_product" values (5, 9);
 insert into "offer_product" values (5, 10);
 ```
+
+## 6
+
+> Formulați în limbaj natural o problemă pe care să o rezolvați folosind un subprogram stocat care săutilizeze două tipuri de colecție studiate. Apelați subprogramul.
+
+Dat fiind printr-un parametru ID-ul unui produs, determinati numarul de curieri care au livrat comenzi care contin acel produs.
+
+```sql
+create or replace function get_nr_couriers_for_product (product_id in number)
+  return number
+is
+  nr_couriers number := 0;
+  
+  -- Nested table.
+  type t_couriers is table of "courier"%rowtype;
+  v_couriers t_couriers;
+  
+  -- Associative array.
+  type t_products is table of number
+  index by binary_integer;
+  v_products_of_courier t_products;
+  begin
+    select *
+    bulk collect into v_couriers
+    from "courier";
+
+    if v_couriers.count = 0 then
+      return 0;
+    end if;
+
+    for i in v_couriers.first..v_couriers.last loop
+      select op.product_id
+      bulk collect into v_products_of_courier
+      from "courier" c
+      join "shipment" s
+        on s.courier_id = c.id 
+      join "order_product" op
+        on op.order_id = s.order_id
+      where c.id = v_couriers(i).id;
+
+      for prod_idx in v_products_of_courier.first..v_products_of_courier.last loop
+        if product_id = v_products_of_courier(prod_idx) then
+          nr_couriers := nr_couriers + 1;
+          exit;
+        end if;
+      end loop;
+    end loop;
+
+    return nr_couriers;
+  end;
+/
+```
+
+Rezultat:
+
+```sql
+SQL> select get_nr_couriers_for_product(1) from dual;
+
+GET_NR_COURIERS_FOR_PRODUCT(1)
+------------------------------
+			     3
+
+SQL> select get_nr_couriers_for_product(4) from dual;
+
+GET_NR_COURIERS_FOR_PRODUCT(4)
+------------------------------
+			     2
+```
+
+<div style="text-align: center;">
+  <img src="./images/tasks/task6-sol.png">
+</div>
+
+## 7
+
+> Formulați în limbaj natural o problemă pe care să o rezolvați folosind un subprogram stocat care să utilizeze un tip de cursor studiat. Apelați subprogramul.
