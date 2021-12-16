@@ -297,3 +297,53 @@ GET_NR_COURIERS_FOR_PRODUCT(4)
 ## 7
 
 > Formulați în limbaj natural o problemă pe care să o rezolvați folosind un subprogram stocat care să utilizeze un tip de cursor studiat. Apelați subprogramul.
+
+Scrieti o functie care se returneze ID-ul comenzii cu cel mai mare numar de produse.
+
+```sql
+create or replace function get_order_id_with_max_nr_products
+  return number
+is
+  max_nr_products number := -32000;
+  nr_products_of_order number := 0;
+  result_order_id number;
+
+  begin
+
+  for o in (
+    select id
+    from "order"
+  )
+  loop
+    select sum(quantity)
+    into nr_products_of_order
+    from "order_product" op
+    where op.order_id = o.id;
+
+    dbms_output.put_line(nr_products_of_order);
+    if nr_products_of_order > max_nr_products then
+      max_nr_products := nr_products_of_order;
+      result_order_id := o.id;
+    end if;
+
+  end loop;
+
+  return result_order_id;
+end;
+/
+```
+
+Rezultat:
+
+```sql
+SQL> select get_order_id_with_max_nr_products() from dual;
+
+GET_ORDER_ID_WITH_MAX_NR_PRODUCTS()
+-----------------------------------
+				  1
+```
+
+<div style="text-align: center;">
+  <img src="./images/tasks/task7-sol.png">
+</div>
+

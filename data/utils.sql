@@ -1,3 +1,4 @@
+-- Task 6
 create or replace function get_nr_couriers_for_product (product_id in number)
   return number
 is
@@ -40,4 +41,36 @@ is
 
     return nr_couriers;
   end;
+/
+
+-- Task 7
+create or replace function get_order_id_with_max_nr_products
+  return number
+is
+  max_nr_products number := -32000;
+  nr_products_of_order number := 0;
+  result_order_id number;
+
+  begin
+
+  for o in (
+    select id
+    from "order"
+  )
+  loop
+    select sum(quantity)
+    into nr_products_of_order
+    from "order_product" op
+    where op.order_id = o.id;
+
+    dbms_output.put_line(nr_products_of_order);
+    if nr_products_of_order > max_nr_products then
+      max_nr_products := nr_products_of_order;
+      result_order_id := o.id;
+    end if;
+
+  end loop;
+
+  return result_order_id;
+end;
 /
