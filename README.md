@@ -778,3 +778,60 @@ where order_id = 8;  2    3
 <div style="text-align: center;">
   <img src="./images/tasks/task11-sol.png">
 </div>
+
+## 12
+
+> Definiți un trigger de tip LDD. Declanșați trigger-ul.
+
+```sql
+create table audit_offer (
+  "db_name" varchar2(50),
+  "user" varchar2(50),
+  "event" varchar2(50),
+  "occurred_at" timestamp
+);
+
+create or replace trigger offer_high_level_changes
+	after alter on schema
+begin
+	insert into audit_offer
+	values (sys.database_name, sys.login_user, sys.sysevent, systimestamp);
+end;
+/
+```
+
+Rezultat:
+
+```sql
+SQL> select * from audit_offer;
+
+no rows selected
+
+SQL> alter table "offer"
+add discount number;  2  
+
+Table altered.
+
+SQL> select * 
+from audit_offer;  2  
+
+db_name
+--------------------------------------------------
+user
+--------------------------------------------------
+event
+--------------------------------------------------
+occurred_at
+---------------------------------------------------------------------------
+ORCLCDB.LOCALDOMAIN
+ANDU
+ALTER
+17-DEC-21 07.21.56.691775 PM
+
+
+SQL> 
+```
+
+<div style="text-align: center;">
+  <img src="./images/tasks/task12-sol.png">
+</div>
