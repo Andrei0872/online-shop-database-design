@@ -434,3 +434,160 @@ Iar aceasta este situatia curierilor si a produselor livrate de fiecare dintre e
   <img src="./images/tasks/task8-show-join.png">
 </div>
 
+## 9
+
+> Formulați în limbaj natural o problemă pe care să o rezolvați folosind un subprogram stocat de tip procedură care să utilizeze într-o singură comandă SQL 5 dintre tabelele definite. Tratați toate excepțiile care pot apărea, incluzând excepțiile NO_DATA_FOUND și TOO_MANY_ROWS. Apelați subprogramul astfel încât să evidențiați toate cazurile tratate.
+
+Dandu-se ID-ul unui curier, determinati cea mai scumpa comanda care a fost livrata de curierul cu ID-ul dat. Avand in vedere ca, pe langa 'RON', valuta poate fi una din 'EUR' sau 'USD', in cazul celor din urma se va face conversia in 'RON'.
+
+```sql
+-- Pentru a simula eroarea `TOO_MANY_ROWS`, o sa fie nevoie sa se insereze niste randuri noi.
+-- Randurile de mai jos ajuta la crearea unei noi comnezi ce contine produsele cu ID-urile `1` respectiv `4`(ambele in dubla cantitate). Comanda este preluata de curierul cu ID-ul `2`.
+
+insert into "order" values (7, 1, to_date('26-12-2021','dd-mm-yyyy'));
+
+insert into "order_product" values (7, 1, 2);
+insert into "order_product" values (7, 4, 2);
+
+insert into "shipment" values (7, 7, 2);
+```
+
+```sql
+-- Functia care ajuta la conversia din 'USD' sau 'EUR' in 'RON'.
+create or replace function convert_to_RON(crt_price in number, currency "provider".products_currency%type)
+return float
+is
+  EUR float := 4.95;
+  USD float := 4.37;
+begin
+  
+  if currency = 'EUR' then
+    return crt_price * EUR;
+  elsif currency = 'USD' then
+    return crt_price * USD;
+  else
+    return crt_price;
+  end if;
+end;
+/
+```
+
+```sql
+create or replace procedure get_most_expensive_order_of_courier (
+  courier_id in "courier".id%type,
+  total_price out number
+)
+is
+  crt_courier "courier"%rowtype;
+
+  begin
+    select *
+    into crt_courier
+    from "courier" c
+    where c.id = courier_id;
+
+    with
+      -- Getting the results as:
+      -- courier_id | shipment_id | total_price_from_that_shipment
+      courier_products_situation as (
+        select 
+          c.id "c_id",
+          s.id "s_id",
+          sum(
+            op.quantity * convert_to_RON(p.price, (select products_currency from "provider" prov where prov.id = p.provider_id))
+          ) "total_price"
+        from "courier" c
+        join "shipment" s
+          on c.id = s.courier_id 
+        join "order_product" op
+          on op.order_id = s.order_id
+        join "product" p
+          on p.id = op.product_id 
+        group by (c.id, s.id)
+      ),
+
+      -- From the above CTE we're only taking what's relevant.
+      crt_courier_situation as (
+        select *
+        from courier_products_situation
+        where "c_id" = courier_id
+      )
+    select "total_price"
+    into total_price
+    from crt_courier_situation
+    where crt_courier_situation."total_price" = (
+      select max("total_price")
+      from crt_courier_situation
+    );
+
+    exception
+      when NO_DATA_FOUND then
+        dbms_output.put_line('There is no courier with the ID ' || courier_id);
+        total_price := -1;
+      when TOO_MANY_ROWS then
+        dbms_output.put_line('The courier with the ID ' || courier_id || ' has multiple orders which have the same maximum price.');
+        total_price := -1;
+end;
+/
+```
+
+Rezultat:
+
+```sql
+SQL> declare
+	total_price number;
+begin
+	get_most_expensive_order_of_courier(1, total_price);
+	dbms_output.put_line('TOTAL PRICE: ' || total_price);
+end;
+/
+TOTAL PRICE: 93.2
+
+PL/SQL procedure successfully completed.
+
+SQL> declare
+	total_price number;
+begin
+	get_most_expensive_order_of_courier(2, total_price);
+	dbms_output.put_line('TOTAL PRICE: ' || total_price);
+end;
+/
+The courier with the ID 2 has multiple orders which have the same maximum price.
+TOTAL PRICE: -1
+
+PL/SQL procedure successfully completed.
+
+SQL> declare
+	total_price number;
+begin
+	get_most_expensive_order_of_courier(5, total_price);
+	dbms_output.put_line('TOTAL PRICE: ' || total_price);
+end;
+/
+TOTAL PRICE: 190.6
+
+PL/SQL procedure successfully completed.
+
+SQL> declare
+	total_price number;
+begin
+	get_most_expensive_order_of_courier(100, total_price);
+	dbms_output.put_line('TOTAL PRICE: ' || total_price);
+end;
+/
+There is no courier with the ID 100
+TOTAL PRICE: -1
+
+PL/SQL procedure successfully completed.
+```
+
+<div style="text-align: center;">
+  <img src="./images/tasks/task9-sol.png">
+</div>
+
+O vizualizare a CTE-ului `courier_products_situation`:
+
+<div style="text-align: center;">
+  <img src="./images/tasks/task9-situation.png">
+</div>
+
