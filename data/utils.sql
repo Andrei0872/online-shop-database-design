@@ -74,3 +74,44 @@ is
   return result_order_id;
 end;
 /
+
+-- Task 8
+create or replace function check_courier_delivered_product (courier_id in number, product_id in number)
+  return number
+is
+  crt_courier "courier"%rowtype;
+  has_found_product number := 0;
+
+  begin
+    select *
+    into crt_courier
+    from "courier" c
+    where c.id = courier_id;
+
+    for courier_and_product_info in (
+      select c.id "courier_id", op.product_id
+      from "courier" c
+      join "shipment" s
+        on s.courier_id = c.id
+      join "order_product" op
+        on op.order_id  = s.order_id
+    )
+    loop
+      if courier_and_product_info."courier_id" != courier_id then
+        continue;
+      end if;
+
+      if courier_and_product_info.product_id = product_id then
+        has_found_product := 1;
+        exit;
+      end if;
+    end loop;
+
+    return has_found_product;
+    
+    exception
+      when NO_DATA_FOUND then
+        dbms_output.put_line('There is no courier with the ID ' || courier_id);
+        return -1;
+end;
+/

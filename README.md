@@ -347,3 +347,90 @@ GET_ORDER_ID_WITH_MAX_NR_PRODUCTS()
   <img src="./images/tasks/task7-sol.png">
 </div>
 
+## 8
+
+> Formulați în limbaj natural o problemă pe care să o rezolvați folosind un subprogram stocat de tip funcție care să utilizeze într-o singură comandă SQL 3 dintre tabelele definite. Tratați toate excepțiile care pot apărea. Apelați   subprogramul astfel încât să evidențiați toate cazurile tratate.
+
+Dandu-se ID-ul unui curieri si ID-ul unui produs ca parametri, verificati daca produsul cu ID-ul dat a fost vreodata livrat de curierul cu ID-ul dat. Functia va returna `1` in cazul afirmativ, `0` altfel si `-1` daca a avut loc o eroare.
+
+```sql
+create or replace function check_courier_delivered_product (courier_id in number, product_id in number)
+  return number
+is
+  crt_courier "courier"%rowtype;
+  has_found_product number := 0;
+
+  begin
+    select *
+    into crt_courier
+    from "courier" c
+    where c.id = courier_id;
+
+    for courier_and_product_info in (
+      select c.id "courier_id", op.product_id
+      from "courier" c
+      join "shipment" s
+        on s.courier_id = c.id
+      join "order_product" op
+        on op.order_id  = s.order_id
+    )
+    loop
+      if courier_and_product_info."courier_id" != courier_id then
+        continue;
+      end if;
+
+      if courier_and_product_info.product_id = product_id then
+        has_found_product := 1;
+        exit;
+      end if;
+    end loop;
+
+    return has_found_product;
+    
+    exception
+      when NO_DATA_FOUND then
+        dbms_output.put_line('There is no courier with the ID ' || courier_id);
+        return -1;
+end;
+/
+```
+
+Rezultat:
+
+```sql
+SQL> select check_courier_delivered_product(11, 4) from dual;
+
+CHECK_COURIER_DELIVERED_PRODUCT(11,4)
+-------------------------------------
+				   -1
+
+There is no courier with the ID 11
+SQL> select check_courier_delivered_product(1, 4) from dual;
+
+CHECK_COURIER_DELIVERED_PRODUCT(1,4)
+------------------------------------
+				   0
+
+SQL> select check_courier_delivered_product(1, 2) from dual;
+
+CHECK_COURIER_DELIVERED_PRODUCT(1,2)
+------------------------------------
+				   1
+
+SQL> select check_courier_delivered_product(1, 9) from dual;
+
+CHECK_COURIER_DELIVERED_PRODUCT(1,9)
+------------------------------------
+				   1
+```
+
+<div style="text-align: center;">
+  <img src="./images/tasks/task8-sol.png">
+</div>
+
+Iar aceasta este situatia curierilor si a produselor livrate de fiecare dintre ei:
+
+<div style="text-align: center;">
+  <img src="./images/tasks/task8-show-join.png">
+</div>
+
