@@ -710,3 +710,71 @@ from "shipment";  2
   <img src="./images/tasks/task10-sol-p2.png">
 </div>
 
+## 11
+
+> Definiți un trigger de tip LMD la nivel de linie. Declanșați trigger-ul.
+
+Trigger-ul `validate_order_products` se va asigura ca in nicio comanda vreun produs sa aiba cantitatea mai mica sau egala ca 0 sau mai mare decat 10.
+
+```sql
+create or replace trigger validate_order_products
+  before insert on "order_product"
+  for each row
+begin
+  if :new.quantity <= 0 then
+    raise_application_error(
+      -20000,
+      'The quantity cannot be less than or equal to 0!'
+    );
+  elsif :new.quantity > 10 then
+    raise_application_error(
+      -20000,
+      'The quantity cannot greater than 10!'
+    );
+  end if;
+end;
+/
+```
+
+Rezultat:
+
+```sql
+SQL> insert into "order_product" values (8, 1, 1);
+
+1 row created.
+
+SQL> insert into "order_product" values (8, 10, 0);
+insert into "order_product" values (8, 10, 0)
+            *
+ERROR at line 1:
+ORA-20000: The quantity cannot be less than or equal to 0!
+ORA-06512: at "ANDU.VALIDATE_ORDER_PRODUCTS", line 3
+ORA-04088: error during execution of trigger 'ANDU.VALIDATE_ORDER_PRODUCTS'
+
+
+SQL> insert into "order_product" values (8, 10, 30);
+insert into "order_product" values (8, 10, 30)
+            *
+ERROR at line 1:
+ORA-20000: The quantity cannot greater than 10!
+ORA-06512: at "ANDU.VALIDATE_ORDER_PRODUCTS", line 8
+ORA-04088: error during execution of trigger 'ANDU.VALIDATE_ORDER_PRODUCTS'
+
+
+SQL> insert into "order_product" values (8, 10, 8);
+
+1 row created.
+
+SQL> select *
+from "order_product"
+where order_id = 8;  2    3  
+
+  ORDER_ID PRODUCT_ID	QUANTITY
+---------- ---------- ----------
+	 8	    1	       1
+	 8	   10	       8
+```
+
+<div style="text-align: center;">
+  <img src="./images/tasks/task11-sol.png">
+</div>
