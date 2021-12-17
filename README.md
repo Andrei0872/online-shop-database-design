@@ -591,3 +591,122 @@ O vizualizare a CTE-ului `courier_products_situation`:
   <img src="./images/tasks/task9-situation.png">
 </div>
 
+## 10
+
+> Definiți un trigger de tip LMD la nivel de comandă. Declanșați trigger-ul.
+
+* after insert on `order`: grab the ID of the last inserted row and assign to a random courier and add the record in the `shipment` table
+
+Trigger-ul `create_shipment_after_order` va intra in functiune dupa ce o noua comanda a fost creata, iar ceea ce are de facut este sa atribuie unui curier, ales la intamplare, noua comanda.
+
+```sql
+create or replace trigger create_shipment_after_order
+  after insert on "order"
+declare
+  last_created_order_id number;
+  last_shipment_id number;
+  random_courier_idx number;
+
+  type t_couriers is table of number
+  index by binary_integer;
+  v_couriers t_couriers;
+begin
+
+  select max(id)
+  into last_created_order_id
+  from "order";
+
+  select max(id)
+  into last_shipment_id
+  from "shipment";
+
+  select id
+  bulk collect into v_couriers
+  from "courier";
+
+  random_courier_idx := trunc(dbms_random.value(0, v_couriers.count));
+
+  insert into
+  "shipment"
+  values (last_shipment_id + 1, last_created_order_id, v_couriers(random_courier_idx));
+
+end;
+/
+```
+
+Rezultat:
+
+```sql
+SQL> select *
+from "shipment";  2  
+
+	ID   ORDER_ID COURIER_ID
+---------- ---------- ----------
+	 1	    1	       1
+	 2	    2	       2
+	 3	    3	       3
+	 4	    4	       4
+	 5	    5	       5
+	 6	    6	       1
+	 7	    7	       2
+
+7 rows selected.
+
+SQL> insert into "order" values (8, 1, to_date('28-12-2021','dd-mm-yyyy'));
+
+1 row created.
+
+SQL> select *
+from "shipment";  2  
+
+	ID   ORDER_ID COURIER_ID
+---------- ---------- ----------
+	 8	    8	       2
+	 1	    1	       1
+	 2	    2	       2
+	 3	    3	       3
+	 4	    4	       4
+	 5	    5	       5
+	 6	    6	       1
+	 7	    7	       2
+
+8 rows selected.
+
+SQL> insert into "order" values (8, 1, to_date('28-12-2021','dd-mm-yyyy'));
+insert into "order" values (8, 1, to_date('28-12-2021','dd-mm-yyyy'))
+*
+ERROR at line 1:
+ORA-00001: unique constraint (ANDU.ORDER_PK) violated
+
+
+SQL> insert into "order" values (9, 1, to_date('28-12-2021','dd-mm-yyyy'));
+
+1 row created.
+
+SQL> 
+SQL> select *
+from "shipment";  2  
+
+	ID   ORDER_ID COURIER_ID
+---------- ---------- ----------
+	 8	    8	       2
+	 9	    9	       4
+	 1	    1	       1
+	 2	    2	       2
+	 3	    3	       3
+	 4	    4	       4
+	 5	    5	       5
+	 6	    6	       1
+	 7	    7	       2
+
+9 rows selected.
+```
+
+<div style="text-align: center;">
+  <img src="./images/tasks/task10-sol-p1.png">
+</div>
+
+<div style="text-align: center;">
+  <img src="./images/tasks/task10-sol-p2.png">
+</div>
+
